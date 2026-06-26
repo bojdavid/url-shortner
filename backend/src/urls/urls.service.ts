@@ -28,8 +28,12 @@ export class UrlsService {
             expiresAt = new Date();
             expiresAt.setDate(expiresAt.getDate() + dto.expiresInDays);
         }
+        // Normalise URL — ensure it has a scheme so browsers redirect correctly
+        const originalUrl = /^https?:\/\//i.test(dto.originalUrl)
+            ? dto.originalUrl
+            : `https://${dto.originalUrl}`;
         const url = this.urlRepo.create({
-            originalUrl: dto.originalUrl,
+            originalUrl,
             code, expiresAt,
             owner, ownerId: owner.id
         });
