@@ -1,8 +1,9 @@
 import {
     Controller, Post, Get, Delete, Param,
-    Body, Res, UseGuards, HttpCode
+    Body, Res, UseGuards, HttpCode,
+    Req
 } from '@nestjs/common';
-import type { Response } from 'express';
+import type { Response, Request } from 'express';
 import { UrlsService } from './urls.service';
 import { CreateUrlDto } from './dto/create-url.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // Chapter 6
@@ -22,8 +23,8 @@ export class UrlsController {
     }
     // GET /:code — public redirect
     @Get(':code')
-    async redirect(@Param('code') code: string, @Res() res: Response) {
-        const originalUrl = await this.urlsService.redirect(code);
+    async redirect(@Param('code') code: string, @Res() res: Response, @Req() req: Request) {
+        const originalUrl = await this.urlsService.redirect(code, req);
         return res.redirect(302, originalUrl);
     }
     // GET /urls/:code/stats

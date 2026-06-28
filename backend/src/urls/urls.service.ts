@@ -1,7 +1,11 @@
 import {
     Injectable, NotFoundException,
-    ConflictException, ForbiddenException, GoneException
+    ConflictException, ForbiddenException, GoneException,
+    Inject,
+    forwardRef,
+    Req
 } from '@nestjs/common';
+import { Request } from 'express';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { nanoid } from 'nanoid';
@@ -9,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { Url } from './urls.entity';
 import { CreateUrlDto } from './dto/create-url.dto';
 import { User } from "../users/user.entity"
+import { AnalyticsService } from 'src/analytics/analytics.service';
 
 @Injectable()
 export class UrlsService {
@@ -16,6 +21,8 @@ export class UrlsService {
         @InjectRepository(Url)
         private readonly urlRepo: Repository<Url>,
         private readonly cfg: ConfigService,
+        @Inject(forwardRef(() => AnalyticsService))
+        private readonly analytics: AnalyticsService,
     ) { }
 
     async create(dto: CreateUrlDto, owner: User): Promise<Url> {
@@ -40,13 +47,26 @@ export class UrlsService {
         return this.urlRepo.save(url);
     }
 
-    async redirect(code: string): Promise<string> {
+    async redirect(code: string, req: Request): Promise<string> {
         const url = await this.urlRepo.findOneBy({ code });
         if (!url) throw new NotFoundException('Short URL not found');
         if (url.expiresAt && url.expiresAt < new Date())
             throw new GoneException('This link has expired');
+
         // Fire-and-forget click increment (doesn't block the redirect)
         this.urlRepo.increment({ code }, 'clicks', 1);
+
+        // Detailed analytics — also fire-and-forget
+        const ip = (req.headers['x-forwarded-for'] as string)
+            ?.split(',')[0]?.trim()
+            ?? req.socket.remoteAddress ?? null;
+        this.analytics.record({
+            urlId: url.id,
+            ipHash: ip ? AnalyticsService.hashIp(ip) : null,
+            userAgent: req.headers['user-agent']?.slice(0, 512) ?? null,
+            referer: req.headers['referer']?.slice(0, 2048) ?? null,
+            country: null, // add geo-IP lookup here optionally
+        });
         return url.originalUrl;
     }
 
