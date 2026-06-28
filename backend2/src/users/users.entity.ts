@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Url } from 'src/urls/urls.entity';
 
 @Entity()
@@ -12,12 +12,12 @@ export class User {
     @Column()
     passwordHash: string;
 
-    @Column({ type: 'timestamptz' })
+    @CreateDateColumn()
     createdAt: Date;
 
     @OneToMany(() => Url, (url) => url.owner)
     urls: Url[];
 
-    @Column({ nullable: true, type: 'timestamptz' })
+    @UpdateDateColumn()
     updatedAt: Date;
 }

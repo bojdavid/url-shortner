@@ -1,4 +1,4 @@
-import { Entity, Column, PrimaryGeneratedColumn, ManyToOne } from 'typeorm';
+import { Entity, Column, PrimaryGeneratedColumn, ManyToOne, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { User } from 'src/users/users.entity';
 
 @Entity()
@@ -22,9 +22,9 @@ export class Url {
     @Column({ nullable: true, type: 'timestamptz' })
     expiresAt: Date | null;
 
-    @Column()
+    @CreateDateColumn()
     createdAt: Date;
 
-    @Column()
+    @UpdateDateColumn()
     updatedAt: Date;
 }
