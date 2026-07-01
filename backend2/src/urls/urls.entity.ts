@@ -19,6 +19,9 @@ export class Url {
     @ManyToOne(() => User, (user) => user.urls, { onDelete: 'CASCADE' })
     owner: User;
 
+    @Column()
+    ownerId: string
+
     @Column({ nullable: true, type: 'timestamptz' })
     expiresAt: Date | null;
 

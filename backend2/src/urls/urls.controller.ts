@@ -1,9 +1,10 @@
-import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus, Res, UseGuards } from '@nestjs/common';
 import { CreateUrlDTO } from './dto/urls.dto'
 import { UrlsService } from './urls.service';
 import { JwtAuthGuard } from 'src/auth/jwt-auth.guard';
 import { CurrentUser } from 'src/auth/current-user.decorator';
 import { User } from 'src/users/users.entity';
+import type { Response } from 'express';
 
 
 @Controller('')
@@ -18,18 +19,30 @@ export class UrlsController {
     }
 
 
-    @Delete('delete-url/:short-url')
-    async deleteUrl(@Param('short-url') shortUrl: string, @CurrentUser() user: User) {
+    @Delete('delete-url/:shortUrl')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    async deleteUrl(@Param('shortUrl') shortUrl: string, @CurrentUser() user: User) {
         return this.urlsService.deleteUrl(shortUrl, user.id)
     }
 
-    @Get('/:short-url')
-    async getUrl(@Param('short-url') shortUrl: string) {
-        return this.urlsService.redirect(shortUrl)
+    @Get('/:shortUrl')
+    async getUrl(@Param('shortUrl') shortUrl: string, @Res() res: Response) {
+        let originalUrl = await this.urlsService.redirect(shortUrl);
+        
+        // If the URL doesn't start with http:// or https://, Express treats it as a relative path.
+        // We prepend http:// to ensure it redirects to an external site.
+        if (!/^https?:\/\//i.test(originalUrl)) {
+            originalUrl = `http://${originalUrl}`;
+        }
+        
+        return res.redirect(HttpStatus.FOUND, originalUrl);
     }
 
-    @Get('stats/:short-url')
-    async getUrlStats(@Param('short-url') shortUrl: string, @CurrentUser() user: User) {
+    @Get('stats/:shortUrl')
+    @UseGuards(JwtAuthGuard)
+    @HttpCode(HttpStatus.OK)
+    async getUrlStats(@Param('shortUrl') shortUrl: string, @CurrentUser() user: User) {
         return this.urlsService.getStats(shortUrl, user.id)
     }
 

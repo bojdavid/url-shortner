@@ -25,7 +25,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
         password: cfg.get('DB_PASS'),
         database: cfg.get('DB_NAME'),
         autoLoadEntities: true, // picks up entities registered in feature modules
-        synchronize: true, // AUTO-CREATES tables in dev — disable in prod!
+        synchronize: false, // if true AUTO-CREATES tables in dev — disable in prod!
       }),
     }),
 

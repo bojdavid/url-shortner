@@ -32,6 +32,7 @@ export class UrlsService {
             originalUrl: body.originalUrl,
             shortUrl,
             owner,
+            ownerId: owner.id,
             expiresAt,
             clicks: 0,
             createdAt: now,
@@ -58,7 +59,7 @@ export class UrlsService {
         const url = await this.urlRepo.findOneBy({ shortUrl })
         if (!url) throw new NotFoundException('Url Not Found')
 
-        if (url.owner.id !== ownerId) throw new ForbiddenException("You do not own this URL")
+        if (url.ownerId !== ownerId) throw new ForbiddenException("You do not own this URL")
 
         return url
     }
@@ -66,7 +67,7 @@ export class UrlsService {
         const url = await this.urlRepo.findOneBy({ shortUrl })
         if (!url) throw new NotFoundException('Url Not Found')
 
-        if (url.owner.id !== ownerId) throw new ForbiddenException("You do not own this URL")
+        if (url.ownerId !== ownerId) throw new ForbiddenException("You do not own this URL")
 
         await this.urlRepo.remove(url)
         return { message: "Url deleted successfully" }

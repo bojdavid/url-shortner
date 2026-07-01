@@ -1,4 +1,4 @@
-import { Url } from "src/urls/urls.entity";
+import { Url } from "../urls/urls.entity";
 import { Entity, Column, PrimaryGeneratedColumn, Index, ManyToOne, CreateDateColumn } from "typeorm";
 
 

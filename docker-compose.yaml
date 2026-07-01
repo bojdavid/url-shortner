@@ -1,0 +1,76 @@
+#version: "3.9"
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16
+    container_name: snip-postgres
+    restart: unless-stopped
+
+    # Database credentials
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
+
+    # Expose PostgreSQL on port 5432
+    ports:
+      - "5433:5432"
+
+    # Persist database data even if the container is removed
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    # Connect to the custom bridge network
+    networks:
+      - snip-network
+
+    # Wait until PostgreSQL is ready before allowing dependent services to start
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}" ]
+      interval: 5s
+      timeout: 5s
+      retries: 2
+
+  # NestJS Backend
+  app:
+    build:
+      # Use the backend directory as the build context
+      context: ./backend
+
+      # Dockerfile to use for building the image
+      dockerfile: Dockerfile
+
+    container_name: snip-app
+    restart: unless-stopped
+
+    # Load environment variables from the backend .env file
+    env_file:
+      - ./backend/.env
+
+    # Override specific environment variables for Docker
+    environment:
+      # Use the Docker service name instead of localhost
+      DB_HOST: postgres
+
+    # Expose the NestJS application on port 3000
+    ports:
+      - "3000:3000"
+
+    # Wait for PostgreSQL to become healthy before starting
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # Connect to the same network as PostgreSQL
+    networks:
+      - snip-network
+
+# Named volume for persistent PostgreSQL data
+volumes:
+  pgdata:
+
+    # Custom bridge network so containers can communicate
+networks:
+  snip-network:
+    driver: bridge

@@ -1,98 +1,93 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# URL Shortener Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+This is the backend service for the URL Shortener application, built with [NestJS](https://nestjs.com/) and [TypeORM](https://typeorm.io/) using a PostgreSQL database.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## Architecture
 
-## Description
+The application is structured into domain-driven modules:
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+- **Auth Module (`src/auth`)**: Handles user registration and authentication using JWT and bcrypt.
+- **Users Module (`src/users`)**: Manages user data and database operations.
+- **Urls Module (`src/urls`)**: Core module for creating short URLs, handling redirects, and managing user URLs.
+- **Analytics Module (`src/analytics`)**: Records click events for short URLs and provides analytics data (e.g., clicks by day, top referrers).
 
-## Project setup
+## Database Schema (Entities)
+
+The application uses three main entities:
+
+1. **User (`src/users/user.entity.ts`)**: Stores user credentials.
+   - `id` (UUID)
+   - `email` (Unique)
+   - `passwordHash` (hashed using bcrypt)
+   - One-to-Many relationship with `Url`
+
+2. **Url (`src/urls/urls.entity.ts`)**: Stores short link data.
+   - `id` (UUID)
+   - `code` (Unique short code)
+   - `originalUrl` (Destination URL)
+   - `clicks` (Total click counter)
+   - `expiresAt` (Optional expiry date)
+   - Many-to-One relationship with `User` (owner)
+
+3. **Click (`src/analytics/click.entity.ts`)**: Stores analytics for each redirect.
+   - `id` (UUID)
+   - `urlId` (Foreign key to Url)
+   - `clickedAt` (Timestamp)
+   - `referer` (HTTP referer)
+   - `userAgent` (Client user agent)
+   - `ipHash` (Privacy-safe hashed IP address)
+
+## API Endpoints
+
+### Authentication
+- `POST /auth/register` - Register a new user (expects `email`, `password`). Returns user info and `accessToken`.
+- `POST /auth/login` - Authenticate an existing user. Returns user info and `accessToken`.
+
+### URLs
+*Note: Endpoints with *(Auth Required)* expect a valid JWT Bearer token in the `Authorization` header.*
+
+- `POST /urls` *(Auth Required)* - Create a short URL. Accepts `originalUrl`, and optional `customCode`, `expiresInDays`.
+- `GET /:code` *(Public)* - Redirects to the original URL and asynchronously records a click event. If the link is expired, returns a `410 Gone`.
+- `GET /urls/:code/stats` *(Auth Required)* - Retrieve basic stats for a short URL owned by the current user.
+- `DELETE /urls/:code` *(Auth Required)* - Delete a short URL owned by the current user.
+
+### Analytics
+- `GET /urls/:code/analytics?days=30` *(Auth Required)* - Get detailed analytics for a URL, including clicks by day and top referrers.
+
+## Setup and Installation
+
+### Prerequisites
+- Node.js
+- PostgreSQL Database
+
+### Configuration
+1. Create a `.env` file in the root of the `backend` folder.
+2. Provide the following environment variables:
+   ```env
+   DB_HOST=localhost
+   DB_PORT=5432
+   DB_USER=your_db_user
+   DB_PASS=your_db_password
+   DB_NAME=url_shortener_db
+   PORT=3000
+   ```
+
+### Running the Application
 
 ```bash
-$ npm install
+# Install dependencies
+npm install
+
+# Run in development mode (watch mode)
+npm run start:dev
+
+# Run in production mode
+npm run start:prod
 ```
 
-## Compile and run the project
+## Key Features
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
-```
-
-## Run tests
-
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
-```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- **Privacy-First Analytics**: IP addresses are hashed using SHA-256 before being stored in the database (`AnalyticsService.hashIp`) to protect user privacy.
+- **Performant Redirects**: Click analytics are processed asynchronously (fire-and-forget) to ensure minimal latency during the redirect process.
+- **Global Validation**: DTOs are validated globally using the NestJS `ValidationPipe` with `whitelist: true` to strip out unrecognized properties.
+- **Exception Handling**: A global `AllExceptionsFilter` catches and consistently formats all unhandled exceptions.
