@@ -27,9 +27,9 @@ export class UrlsController {
     findAll(@CurrentUser() user: User) {
         return this.urlsService.findAllForUser(user.id);
     }
-    
+
     // GET /:code — public redirect
-    @Get(':code')
+    @Get('s/:code')
     async redirect(@Param('code') code: string, @Res() res: Response, @Req() req: Request) {
         const originalUrl = await this.urlsService.redirect(code, req);
         return res.redirect(302, originalUrl);
