@@ -6,6 +6,9 @@ import { AllExceptionsFilter } from './common/http-exception.filter';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable CORS for frontend communication
+  app.enableCors();
+
   // Automatically validates all incoming request bodies against DTO classes
   app.useGlobalPipes(new ValidationPipe({ whitelist: true }));
 

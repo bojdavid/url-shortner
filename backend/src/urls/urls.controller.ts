@@ -21,6 +21,13 @@ export class UrlsController {
     create(@Body() dto: CreateUrlDto, @CurrentUser() user: User) {
         return this.urlsService.create(dto, user);
     }
+    // GET /urls
+    @UseGuards(JwtAuthGuard)
+    @Get('urls')
+    findAll(@CurrentUser() user: User) {
+        return this.urlsService.findAllForUser(user.id);
+    }
+    
     // GET /:code — public redirect
     @Get(':code')
     async redirect(@Param('code') code: string, @Res() res: Response, @Req() req: Request) {

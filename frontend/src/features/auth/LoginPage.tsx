@@ -46,8 +46,6 @@ export function LoginPage() {
   return (
     <div className="min-h-screen bg-surface flex flex-col items-center justify-center px-4 relative overflow-hidden">
       {/* Atmospheric blobs */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full bg-primary/20 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] rounded-full bg-tertiary/10 blur-[150px] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-[400px]">
         {/* Brand header */}

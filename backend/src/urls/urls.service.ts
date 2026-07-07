@@ -71,6 +71,13 @@ export class UrlsService {
     }
 
 
+    async findAllForUser(userId: string): Promise<Url[]> {
+        return this.urlRepo.find({
+            where: { ownerId: userId },
+            order: { createdAt: 'DESC' }
+        });
+    }
+
     async getStats(code: string, requesterId: string): Promise<Url> {
         const url = await this.urlRepo.findOneBy({ code });
         if (!url) throw new NotFoundException('Short URL not found');
