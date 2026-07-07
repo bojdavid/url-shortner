@@ -1,6 +1,29 @@
 # URL Shortener
 
-A full-stack URL shortener built with **React (Vite)**, **NestJS**, **PostgreSQL**, **Docker**, and **Nginx**.
+A production-ready full-stack URL shortener built with **React (Vite)**, **NestJS**, **PostgreSQL**, **Docker**, and **Nginx**.
+
+The application provides more than basic URL shortening. It includes:
+
+*  User authentication and authorization
+*  URL shortening and redirection
+*  Click analytics and tracking
+*  Team management and collaboration - coming soon
+*  Containerized deployment with Docker
+*  Reverse proxy architecture using Nginx
+
+---
+
+### PostgreSQL
+
+PostgreSQL serves as the application's primary database and stores persistent data, including:
+
+* User accounts and authentication information
+* Shortened URLs
+* Click analytics and visit history
+* Teams and team memberships
+* Other application-related data
+
+The database is only accessible by the NestJS backend through Docker's internal network.
 
 ---
 
