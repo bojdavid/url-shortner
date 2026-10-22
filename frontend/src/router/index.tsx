@@ -8,8 +8,6 @@ import { ProtectedRoute } from '@components/common/layout/ProtectedRoute';
 import { DashboardPage } from '@pages/url-shortener/dashboard/dashboard';
 import { UrlsPage } from '@pages/url-shortener/urls/urls';
 import { AnalyticsPage } from '@pages/url-shortener/analytics/analytics';
-import { TeamsPage } from '@pages/url-shortener/teams/teams';
-import { SettingsPage } from '@pages/url-shortener/settings/settings';
 import { ProfilePage } from '@pages/url-shortener/profile/profile';
 import PageNotFound from '@pages/PageNotFound';
 
@@ -41,8 +39,6 @@ export const router = createBrowserRouter([
           { path: 'dashboard', element: <DashboardPage /> },
           { path: 'urls', element: <UrlsPage /> },
           { path: 'analytics', element: <AnalyticsPage /> },
-          { path: 'teams', element: <TeamsPage /> },
-          { path: 'settings', element: <SettingsPage /> },
           { path: 'profile', element: <ProfilePage /> },
         ],
       },

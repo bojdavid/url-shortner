@@ -39,6 +39,15 @@ export class UrlsService {
         const originalUrl = /^https?:\/\//i.test(dto.originalUrl)
             ? dto.originalUrl
             : `https://${dto.originalUrl}`;
+
+        // Guard against duplicate URL for the same user
+        const existingUrl = await this.urlRepo.findOne({
+            where: { ownerId: owner.id, originalUrl },
+        });
+        if (existingUrl && (!existingUrl.expiresAt || existingUrl.expiresAt >= new Date())) {
+            throw new ConflictException(`This URL already exists as /s/${existingUrl.code}`);
+        }
+
         const url = this.urlRepo.create({
             originalUrl,
             code, expiresAt,

@@ -2,16 +2,20 @@ import React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { ArrowRight, Lock, Mail } from 'lucide-react';
 import { authApi, loginSchema, type LoginDto } from '@api/auth';
 import { useAuthStore } from '@stores/auth.store';
 import { Button } from '@components/ui/Button';
 import { Input } from '@components/ui/Input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@components/ui/Card';
+import { getErrorMessage } from '@utils/links';
+import { toast } from 'react-toastify';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const login = useAuthStore((state) => state.login);
+  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? '/dashboard';
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginDto>({
     resolver: zodResolver(loginSchema),
@@ -21,65 +25,57 @@ export const LoginPage: React.FC = () => {
     mutationFn: authApi.login,
     onSuccess: (data) => {
       login(data.user, data.accessToken);
-      navigate('/dashboard');
+      toast.success('Welcome back!');
+      navigate(from, { replace: true });
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'Invalid credentials'));
     },
   });
 
-  const onSubmit = (data: LoginDto) => {
-    mutation.mutate(data);
-  };
-
   return (
-    <section className=" p-5">
-      <Card>
-        <CardHeader>
-          <CardTitle>Welcome back</CardTitle>
-          <CardDescription>Enter your credentials to access your account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Email</label>
-              <Input
-                type="email"
-                placeholder="name@example.com"
-                {...register('email')}
-                error={errors.email?.message}
-              />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium">Password</label>
-                <Link to="/auth/forgot-password" className="text-xs text-[var(--color-primary)] hover:underline">
-                  Forgot password?
-                </Link>
-              </div>
-              <Input
-                type="password"
-                placeholder="••••••••"
-                {...register('password')}
-                error={errors.password?.message}
-              />
-            </div>
-            {mutation.isError && (
-              <div className="p-3 text-sm rounded-[8px] bg-[var(--color-surface-2)] border border-[var(--color-error)] text-[var(--color-error)]">
-                {mutation.error instanceof Error ? mutation.error.message : 'Invalid credentials'}
-              </div>
-            )}
-            <Button type="submit" className="w-full" isLoading={mutation.isPending}>
-              Sign In
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="justify-center">
-          <p className="text-sm text-gray-400">
-            Don't have an account?{' '}
-            <Link to="/auth/register" className="text-[var(--color-primary)] hover:underline font-medium">
-              Sign up
-            </Link>
-          </p>
-        </CardFooter>
-      </Card>
+    <section aria-labelledby="login-title">
+      <h1 id="login-title" className="heading-xl">Welcome back</h1>
+      <p className="mt-2 text-[var(--color-muted)]">Sign in to manage your links and analytics.</p>
+
+      <form onSubmit={handleSubmit((d) => mutation.mutate(d))} className="mt-8 space-y-5" noValidate>
+        <Input
+          id="login-email"
+          label="Email"
+          type="email"
+          autoComplete="email"
+          placeholder="name@example.com"
+          leading={<Mail aria-hidden="true" className="h-4 w-4" />}
+          {...register('email')}
+          error={errors.email?.message}
+        />
+        <Input
+          id="login-password"
+          label="Password"
+          type="password"
+          autoComplete="current-password"
+          placeholder="••••••••"
+          leading={<Lock aria-hidden="true" className="h-4 w-4" />}
+          {...register('password')}
+          error={errors.password?.message}
+        />
+        {mutation.isError && (
+          <div role="alert" className="rounded-[var(--radius-control)] border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 px-3 py-2.5 text-sm text-[var(--color-error)]">
+            {getErrorMessage(mutation.error, 'Invalid credentials')}
+          </div>
+        )}
+        <Button id="login-submit" type="submit" size="lg" className="w-full" isLoading={mutation.isPending}>
+          Sign in
+          {!mutation.isPending && <ArrowRight aria-hidden="true" className="h-4 w-4" />}
+        </Button>
+      </form>
+
+      <p className="mt-8 text-center text-sm text-[var(--color-muted)]">
+        Don&apos;t have an account?{' '}
+        <Link to="/auth/register" className="font-medium text-[#b3a8ff] hover:text-white hover:underline">
+          Create one
+        </Link>
+      </p>
     </section>
   );
 };

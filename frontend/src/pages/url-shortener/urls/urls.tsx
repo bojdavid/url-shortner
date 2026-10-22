@@ -1,137 +1,153 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Copy, Trash2, ExternalLink } from 'lucide-react';
-import { urlsApi } from '@api/urls';
-import { Button } from '@components/ui/Button';
-import { Input } from '@components/ui/Input';
-import { Card, CardContent } from '@components/ui/Card';
+import React, { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link2, Search, SearchX } from 'lucide-react';
+import { toast } from 'react-toastify';
+import { urlsApi, type Url } from '@api/urls';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@components/ui/Card';
+import { EmptyState, PageHeader } from '@components/common/Brand';
+import { CreateLinkForm } from '@components/links/CreateLinkForm';
+import { LinkCard, LinkCardSkeleton } from '@components/links/LinkCard';
+import { getErrorMessage, isExpired } from '@utils/links';
+import { cn } from '@utils/cn';
+
+type Filter = 'all' | 'active' | 'expired';
+type Sort = 'newest' | 'clicks';
 
 export const UrlsPage: React.FC = () => {
-  const [newUrl, setNewUrl] = useState('');
   const queryClient = useQueryClient();
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
+  const [sort, setSort] = useState<Sort>('newest');
 
-  const { data: urls = [], isLoading } = useQuery({
-    queryKey: ['urls'],
-    queryFn: urlsApi.findAll,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: urlsApi.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['urls'] });
-      setNewUrl('');
-    },
-  });
+  const { data: urls = [], isLoading, isError, error } = useQuery({ queryKey: ['urls'], queryFn: urlsApi.findAll });
 
   const deleteMutation = useMutation({
     mutationFn: urlsApi.remove,
-    onSuccess: () => {
+    onSuccess: (_, code) => {
+      queryClient.setQueryData<Url[]>(['urls'], (old) => old?.filter((u) => u.code !== code));
       queryClient.invalidateQueries({ queryKey: ['urls'] });
+      toast.success('Link deleted successfully');
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'Could not delete link'));
     },
   });
 
-  const handleShorten = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newUrl) {
-      createMutation.mutate({ originalUrl: newUrl });
-    }
-  };
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return urls
+      .filter((u) => (filter === 'all' ? true : filter === 'expired' ? isExpired(u) : !isExpired(u)))
+      .filter((u) => !q || u.code.toLowerCase().includes(q) || u.originalUrl.toLowerCase().includes(q))
+      .sort((a, b) =>
+        sort === 'clicks' ? b.clicks - a.clicks : new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+  }, [urls, query, filter, sort]);
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    // Ideally a toast would be shown here
-  };
-
-  const domain = window.location.origin;
+  const counts = useMemo(
+    () => ({ all: urls.length, active: urls.filter((u) => !isExpired(u)).length, expired: urls.filter(isExpired).length }),
+    [urls]
+  );
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Links</h1>
-        <p className="text-gray-400">Create, view, and manage your shortened URLs.</p>
-      </div>
+    <div className="space-y-6 sm:space-y-8 min-w-0 max-w-full">
+      <PageHeader title="Links" description="Create, copy and manage all of your short links." />
 
-      <Card className="bg-[var(--color-surface-2)] border-none">
-        <CardContent className="p-4 sm:p-6">
-          <form onSubmit={handleShorten} className="flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <Input
-                type="url"
-                placeholder="https://example.com/very/long/url/that/needs/shortening"
-                value={newUrl}
-                onChange={(e) => setNewUrl(e.target.value)}
-                required
-                className="h-12"
-              />
-            </div>
-            <Button type="submit" size="lg" isLoading={createMutation.isPending} className="sm:w-32">
-              Shorten
-            </Button>
-          </form>
+      <Card className="animate-fade-up min-w-0 max-w-full">
+        <CardHeader>
+          <CardTitle>Create a new link</CardTitle>
+          <CardDescription>Add a custom alias to make it memorable, and an expiry if it&apos;s temporary.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CreateLinkForm />
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
-        {isLoading ? (
-          <div className="text-center py-8 text-gray-400">Loading links...</div>
-        ) : urls.length === 0 ? (
-          <div className="text-center py-16 border border-dashed border-[var(--color-border)] rounded-[10px]">
-            <p className="text-gray-400">No links found. Create one above!</p>
+      <section aria-labelledby="links-heading" className="space-y-4 min-w-0 max-w-full">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <h2 id="links-heading" className="text-lg font-semibold">
+            Your links <span className="text-[var(--color-muted)]">({urls.length})</span>
+          </h2>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="relative block sm:w-64">
+              <span className="sr-only">Search links</span>
+              <Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-muted)]" />
+              <input
+                id="links-search"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search alias or URL"
+                className="h-10 w-full rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] pl-9 pr-3 text-sm outline-none transition-all placeholder:text-gray-500 focus:border-[var(--color-primary)] focus:shadow-[0_0_0_4px_rgb(124_108_255/0.15)]"
+              />
+            </label>
+            <div className="flex gap-2">
+              <div role="tablist" aria-label="Filter links" className="flex flex-1 rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] p-1">
+                {(['all', 'active', 'expired'] as Filter[]).map((f) => (
+                  <button
+                    key={f}
+                    id={`filter-${f}`}
+                    type="button"
+                    role="tab"
+                    aria-selected={filter === f}
+                    onClick={() => setFilter(f)}
+                    className={cn(
+                      'flex-1 cursor-pointer rounded-md px-3 py-1 text-xs font-medium capitalize transition-all',
+                      filter === f ? 'bg-[var(--color-surface-3)] text-white' : 'text-[var(--color-muted)] hover:text-white'
+                    )}
+                  >
+                    {f} <span className="opacity-60">{counts[f]}</span>
+                  </button>
+                ))}
+              </div>
+              <label className="sr-only" htmlFor="links-sort">Sort links</label>
+              <select
+                id="links-sort"
+                value={sort}
+                onChange={(e) => setSort(e.target.value as Sort)}
+                className="h-10 cursor-pointer rounded-[var(--radius-control)] border border-[var(--color-border-strong)] bg-[var(--color-surface-1)] px-3 text-xs font-medium outline-none focus:border-[var(--color-primary)]"
+              >
+                <option value="newest">Newest</option>
+                <option value="clicks">Most clicks</option>
+              </select>
+            </div>
           </div>
-        ) : (
-          urls.map((url) => {
-            const shortUrl = `${domain}/${url.code}`;
-            return (
-              <Card key={url.id} className="overflow-hidden">
-                <CardContent className="p-0 flex flex-col sm:flex-row items-stretch">
-                  <div className="flex-1 p-4 sm:p-6 flex flex-col justify-center">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex-1 bg-black rounded-[6px] px-3 py-2 flex items-center gap-2">
-                        <span className="font-mono text-sm text-[var(--color-primary)] truncate flex-1">
-                          {shortUrl}
-                        </span>
-                        <button
-                          onClick={() => copyToClipboard(shortUrl)}
-                          className="text-gray-400 hover:text-white transition-colors p-1"
-                          title="Copy"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 mt-2 sm:mt-0">
-                      <a 
-                        href={url.originalUrl} 
-                        target="_blank" 
-                        rel="noreferrer"
-                        className="truncate hover:text-gray-300 transition-colors flex items-center gap-1 max-w-[180px] sm:max-w-[300px] md:max-w-[500px]"
-                      >
-                        {url.originalUrl}
-                        <ExternalLink className="h-3 w-3 inline shrink-0" />
-                      </a>
-                      <span className="hidden sm:inline">•</span>
-                      <span>{url.clicks} clicks</span>
-                      <span className="hidden sm:inline">•</span>
-                      <span>{new Date(url.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  <div className="border-t sm:border-t-0 sm:border-l border-[var(--color-border)] bg-[var(--color-surface-2)] flex flex-row sm:flex-col p-2 gap-2 sm:w-16">
-                    <button
-                      onClick={() => deleteMutation.mutate(url.code)}
-                      disabled={deleteMutation.isPending}
-                      className="flex-1 flex items-center justify-center text-gray-400 hover:text-[var(--color-error)] transition-colors rounded-[6px] hover:bg-black/50"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-5 w-5" />
-                    </button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })
+        </div>
+
+        {deleteMutation.isError && (
+          <div role="alert" className="rounded-[var(--radius-control)] border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 px-3 py-2.5 text-sm text-[var(--color-error)]">
+            {getErrorMessage(deleteMutation.error, 'Could not delete link')}
+          </div>
         )}
-      </div>
+
+        {isLoading ? (
+          <div className="space-y-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <LinkCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : isError ? (
+          <div role="alert" className="rounded-[var(--radius-card)] border border-[var(--color-error)]/40 bg-[var(--color-error)]/10 p-5 text-sm text-[var(--color-error)]">
+            {getErrorMessage(error, 'Failed to load links')}
+          </div>
+        ) : urls.length === 0 ? (
+          <EmptyState icon={Link2} title="No links yet" description="Create your first short link using the form above." />
+        ) : visible.length === 0 ? (
+          <EmptyState icon={SearchX} title="No matches" description="Try a different search term or filter." />
+        ) : (
+          <ul className="space-y-3">
+            {visible.map((url, i) => (
+              <li key={url.id}>
+                <LinkCard
+                  url={url}
+                  style={{ animationDelay: `${Math.min(i, 8) * 40}ms` }}
+                  onDelete={(code) => deleteMutation.mutate(code)}
+                  isDeleting={deleteMutation.isPending && deleteMutation.variables === url.code}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 };
-
