@@ -1,22 +1,29 @@
-import apiClient from './client';
-import type { Url, CreateUrlPayload } from '@app-types/index';
+import { apiClient } from './client';
+
+export interface Url {
+  id: string;
+  code: string;
+  originalUrl: string;
+  clicks: number;
+  expiresAt: string | null;
+  ownerId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateUrlDto {
+  originalUrl: string;
+}
 
 export const urlsApi = {
-  getAll: async (): Promise<Url[]> => {
-    const { data } = await apiClient.get<Url[]>('/urls');
-    return data;
+  findAll: async (): Promise<Url[]> => {
+    const response = await apiClient.get('/urls');
+    return response.data;
   },
-
-  create: async (payload: CreateUrlPayload): Promise<Url> => {
-    const { data } = await apiClient.post<Url>('/urls', payload);
-    return data;
+  create: async (data: CreateUrlDto): Promise<Url> => {
+    const response = await apiClient.post('/urls', data);
+    return response.data;
   },
-
-  getStats: async (code: string): Promise<Url> => {
-    const { data } = await apiClient.get<Url>(`/urls/${code}/stats`);
-    return data;
-  },
-
   remove: async (code: string): Promise<void> => {
     await apiClient.delete(`/urls/${code}`);
   },

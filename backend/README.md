@@ -47,7 +47,7 @@ The application uses three main entities:
 *Note: Endpoints with *(Auth Required)* expect a valid JWT Bearer token in the `Authorization` header.*
 
 - `POST /urls` *(Auth Required)* - Create a short URL. Accepts `originalUrl`, and optional `customCode`, `expiresInDays`.
-- `GET /:code` *(Public)* - Redirects to the original URL and asynchronously records a click event. If the link is expired, returns a `410 Gone`.
+- `GET /s/:code` *(Public)* - Redirects to the original URL and asynchronously records a click event. If the link is expired, returns a `410 Gone`.
 - `GET /urls/:code/stats` *(Auth Required)* - Retrieve basic stats for a short URL owned by the current user.
 - `DELETE /urls/:code` *(Auth Required)* - Delete a short URL owned by the current user.
 

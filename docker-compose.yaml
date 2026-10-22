@@ -73,7 +73,7 @@ services:
   # React Frontend
   frontend:
     build:
-      context: ./frontend2
+      context: ./frontend
       dockerfile: Dockerfile
 
     container_name: snip-frontend
